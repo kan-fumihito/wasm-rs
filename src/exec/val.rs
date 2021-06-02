@@ -1,8 +1,9 @@
 use crate::structure::types::ValType;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Copy)]
 pub enum Val {
     I32(i32),
     I64(i64),

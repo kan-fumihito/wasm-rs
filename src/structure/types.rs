@@ -1,7 +1,7 @@
 #[cfg(test)]
 use proptest_derive::Arbitrary;
-
-#[derive(Debug, Clone, PartialEq)]
+use serde::{Serialize, Deserialize};
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct FuncType(pub Vec<ValType>, pub Vec<ValType>);
 
@@ -19,7 +19,7 @@ impl FuncType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ValType {
     I32,
@@ -28,7 +28,7 @@ pub enum ValType {
     F64,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct Limits {
     pub min: u32,
@@ -49,7 +49,7 @@ impl Limits {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct MemType(pub Limits);
 
@@ -59,7 +59,7 @@ impl MemType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct TableType(pub Limits, pub ElemType);
 
@@ -69,13 +69,13 @@ impl TableType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ElemType {
     FuncRef,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct GlobalType(pub Mut, pub ValType);
 
@@ -85,13 +85,13 @@ impl GlobalType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum Mut {
     Const,
     Var,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct ResultType(pub Option<ValType>);

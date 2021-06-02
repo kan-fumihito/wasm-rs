@@ -1,12 +1,14 @@
+/// Rcのみ
 use crate::structure::types::{GlobalType, Mut};
 
 use super::val::Val;
 use std::cell::RefCell;
 use std::cell::{Ref, RefMut};
 use std::rc::Rc;
+use serde::{Serialize,Deserialize};
 
-#[derive(Debug, Clone, PartialEq)]
-struct GlobalInst {
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct GlobalInst {
     value: Val,
     mut_: Mut,
 }

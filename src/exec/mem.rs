@@ -1,3 +1,4 @@
+/// Rcのみ
 use crate::structure::instructions::Memarg;
 use crate::structure::types::{Limits, MemType};
 use crate::WasmError;
@@ -9,8 +10,9 @@ use std::cell::RefCell;
 use std::cell::{Ref, RefMut};
 use std::convert::TryFrom;
 use std::rc::Rc;
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct MemInst {
     max: Option<usize>,
     data: Vec<u8>,
@@ -156,6 +158,7 @@ impl MemAddr {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct MemAddrIterator(MemAddr, i32);
 
 impl Iterator for MemAddrIterator {

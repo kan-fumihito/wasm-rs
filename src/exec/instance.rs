@@ -12,6 +12,7 @@ use super::val::Val;
 use super::FuncAddr;
 use std::collections::HashMap;
 use std::rc::Rc;
+use serde::{Serialize, Deserialize};
 
 pub type ExternalModule = HashMap<String, ExternalVal>;
 pub type ImportObjects = HashMap<String, ExternalModule>;

@@ -1,10 +1,11 @@
 use super::instructions::Expr;
 use super::types::{FuncType, GlobalType, MemType, TableType, ValType};
 use super::values::{Byte, Name};
+use serde::{Serialize, Deserialize};
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Module {
     pub types: Vec<FuncType>,
     pub funcs: Vec<Func>,
@@ -27,7 +28,7 @@ where
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct TypeIdx(pub u32);
 
@@ -39,7 +40,7 @@ impl Into<u32> for TypeIdx {
 
 impl TypedIdx for TypeIdx {}
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct FuncIdx(pub u32);
 
@@ -51,7 +52,7 @@ impl Into<u32> for FuncIdx {
 
 impl TypedIdx for FuncIdx {}
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct TableIdx(pub u32);
 
@@ -63,7 +64,7 @@ impl Into<u32> for TableIdx {
 
 impl TypedIdx for TableIdx {}
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct MemIdx(pub u32);
 
@@ -75,7 +76,7 @@ impl Into<u32> for MemIdx {
 
 impl TypedIdx for MemIdx {}
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct GlobalIdx(pub u32);
 
@@ -87,7 +88,7 @@ impl Into<u32> for GlobalIdx {
 
 impl TypedIdx for GlobalIdx {}
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct LocalIdx(pub u32);
 
@@ -99,7 +100,7 @@ impl Into<u32> for LocalIdx {
 
 impl TypedIdx for LocalIdx {}
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct LabelIdx(pub u32);
 
@@ -111,33 +112,33 @@ impl Into<u32> for LabelIdx {
 
 impl TypedIdx for LabelIdx {}
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Func {
     pub type_: TypeIdx,
     pub locals: Vec<ValType>,
     pub body: Expr,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct Table {
     pub type_: TableType,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct Mem {
     pub type_: MemType,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Global {
     pub type_: GlobalType,
     // constant expression
     pub init: Expr,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Elem {
     pub table: TableIdx,
     // constant expression
@@ -145,7 +146,7 @@ pub struct Elem {
     pub init: Vec<FuncIdx>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Data {
     pub data: MemIdx,
     // constant expression
@@ -153,20 +154,20 @@ pub struct Data {
     pub init: Vec<Byte>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct Start {
     pub func: FuncIdx,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct Export {
     pub name: Name,
     pub desc: ExportDesc,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ExportDesc {
     Func(FuncIdx),
@@ -209,7 +210,7 @@ impl ExportDesc {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct Import {
     pub module: Name,
@@ -217,7 +218,7 @@ pub struct Import {
     pub desc: ImportDesc,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ImportDesc {
     Func(TypeIdx),

@@ -1,3 +1,5 @@
+/// RCのみ
+
 use super::instance::{ModuleInst, TypedIdxAccess};
 use super::stack::{AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
 use super::val::{InterpretPrimitive, PrimitiveVal, Val};
@@ -10,6 +12,7 @@ use frunk::{hlist::HList, HCons, HNil};
 use std::cell::Ref;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use serde::{Serialize,Deserialize};
 
 #[derive(Clone, Debug)]
 pub struct FuncAddr(Rc<RefCell<FuncInst>>);
@@ -112,6 +115,12 @@ pub(super) enum FuncInst {
         type_: FuncType,
         host_code: Rc<dyn Fn(Vec<Val>) -> Result<Option<Val>, WasmError>>,
     },
+}
+
+#[derive(Serialize, Deserialize,Debug)]
+pub struct MRuntimeFunc{
+    type_: FuncType,
+    code: Func,
 }
 
 impl std::fmt::Debug for FuncInst {

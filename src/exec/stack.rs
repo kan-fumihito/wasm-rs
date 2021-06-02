@@ -1,4 +1,5 @@
-use super::func::{FuncAddr, FuncInst};
+/// Rcのみ
+use super::func::{FuncAddr, FuncInst, MRuntimeFunc};
 use super::instance::{ModuleInst, TypedIdxAccess};
 use super::utils::{pop_n, sign_f32, sign_f64, Sign};
 use super::val::{InterpretVal, Val};
@@ -9,6 +10,7 @@ use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
 use num::NumCast;
+use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 use std::rc::Weak;
 
@@ -70,6 +72,15 @@ pub enum AdminInstr {
     Return,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub enum MAdminInstr {
+    Instr(Instr),
+    Invoke(MRuntimeFunc),
+    Label(Label, Vec<Instr>),
+    Br(LabelIdx),
+    Return,
+}
+
 #[derive(Debug, Clone)]
 pub struct Frame {
     pub module: Weak<ModuleInst>,
@@ -77,7 +88,13 @@ pub struct Frame {
     pub n: usize,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize,Debug)]
+pub struct MFrame {
+    pub locals: Vec<Val>,
+    pub n: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Label {
     // 前から実行
     pub instrs: Vec<Instr>,
@@ -90,6 +107,12 @@ pub struct FrameStack {
     // not empty
     // stack[0]の継続は空
     pub stack: Vec<LabelStack>,
+}
+
+#[derive(Serialize, Deserialize,Debug)]
+pub struct MFrameStack {
+    pub frame: MFrame,
+    pub stack: Vec<MLabelStack>,
 }
 
 impl FrameStack {
@@ -163,6 +186,13 @@ pub struct LabelStack {
     pub label: Label,
     // 後ろから実行
     pub instrs: Vec<AdminInstr>,
+    pub stack: Vec<Val>,
+}
+
+#[derive(Serialize, Deserialize,Debug)]
+pub struct MLabelStack {
+    pub label: Label,
+    pub instrs: Vec<MAdminInstr>,
     pub stack: Vec<Val>,
 }
 
@@ -1102,6 +1132,11 @@ impl LabelStack {
 pub struct Stack {
     // not empty
     pub stack: Vec<FrameStack>,
+}
+
+#[derive(Serialize, Deserialize,Debug)]
+pub struct MStack {
+    pub stack: Vec<MFrameStack>,
 }
 
 impl Stack {

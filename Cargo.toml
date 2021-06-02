@@ -12,6 +12,8 @@ num = "0.2.0"
 frunk = "0.3.0"
 generic-array = "0.13.2"
 typenum = "1.11.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 
 [dev-dependencies]
@@ -19,4 +21,3 @@ proptest-derive = { git = "https://github.com/alessandrod/proptest.git", rev = "
 proptest = "0.9.4"
 lazy_static = "*"
 maplit = "1.0.2"
-serde_json = "1.0.44"

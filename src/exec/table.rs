@@ -1,3 +1,4 @@
+/// Rcのみ
 use super::FuncAddr;
 use crate::exec::instance::TypedIdxAccess;
 use crate::structure::modules::FuncIdx;
@@ -6,6 +7,7 @@ use crate::WasmError;
 use std::cell::RefCell;
 use std::cell::{Ref, RefMut};
 use std::rc::Rc;
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone)]
 struct TableInst {

@@ -1,16 +1,15 @@
-use wasm_rs::binary::decode_module;
-use wasm_rs::exec::{ModuleInst, ExternalVal, FuncAddr, MemAddr};
 use maplit::hashmap;
+use wasm_rs::binary::decode_module;
+use wasm_rs::exec::{ExternalVal, FuncAddr, MemAddr, ModuleInst};
 
-fn main(){
+fn main() {
     let memory = ExternalVal::Mem(MemAddr::new(10, None));
     let print = ExternalVal::Func(FuncAddr::alloc_host(|(x,): (i32,)| {
         println!("{}", x);
         Ok(())
     }));
 
-    let memory_module =
-        decode_module(&std::fs::read("cl8w-wasm/memory.wasm").unwrap()).unwrap();
+    let memory_module = decode_module(&std::fs::read("cl8w-wasm/memory.wasm").unwrap()).unwrap();
     let memory_instance = ModuleInst::new(
         &memory_module,
         hashmap! {
@@ -21,8 +20,7 @@ fn main(){
     )
     .unwrap();
 
-    let main_module =
-        decode_module(&std::fs::read("cl8w-wasm/cl8w-gcd.wasm").unwrap()).unwrap();
+    let main_module = decode_module(&std::fs::read("cl8w-wasm/cl8w-gcd.wasm").unwrap()).unwrap();
     let main_instance = ModuleInst::new(
         &main_module,
         hashmap! {

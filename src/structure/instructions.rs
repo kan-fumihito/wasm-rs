@@ -1,12 +1,13 @@
 use super::modules::{FuncIdx, GlobalIdx, LabelIdx, LocalIdx, TypeIdx};
 use super::types::ResultType;
+use serde::{Serialize, Deserialize};
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Expr(pub Vec<Instr>);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum Instr {
     I32Const(i32),
     I64Const(i64),
@@ -180,7 +181,7 @@ pub enum Instr {
     CallIndirect(TypeIdx),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct Memarg {
     pub offset: u32,
