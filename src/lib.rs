@@ -1,5 +1,7 @@
 #![recursion_limit = "1024"]
 #![type_length_limit = "2097152"]
+#[macro_use] extern crate serde;
+#[macro_use] extern crate serde_json;
 
 pub mod binary;
 pub mod exec;

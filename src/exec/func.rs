@@ -14,8 +14,12 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use serde::{Serialize,Deserialize};
 
+
 #[derive(Clone, Debug)]
-pub struct FuncAddr(Rc<RefCell<FuncInst>>);
+pub struct FuncAddr(
+    #[serde(skip_serializing)]
+    Rc<RefCell<FuncInst>>
+);
 
 impl FuncAddr {
     pub fn call(&self, params: Vec<Val>) -> Result<Option<Val>, WasmError> {

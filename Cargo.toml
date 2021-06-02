@@ -1,7 +1,7 @@
 [package]
 name = "wasm-rs"
 version = "0.1.0"
-authors = ["kgtkr <kgtkr.jp@gmail.com>"]
+authors = ["kan-fumihito <kan_f1204@docomo.ne.jp>"]
 edition = "2018"
 
 [dependencies]
