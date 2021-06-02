@@ -5,17 +5,26 @@ use crate::structure::modules::{
 use crate::structure::types::FuncType;
 use crate::WasmError;
 
-use super::global::GlobalAddr;
-use super::mem::MemAddr;
-use super::table::TableAddr;
+use super::func::{FuncAddr, FuncInst};
+use super::global::{GlobalAddr, GlobalInst};
+use super::mem::{MemAddr, MemInst};
+use super::table::{TableAddr, TableInst};
 use super::val::Val;
-use super::FuncAddr;
+use serde::{Deserialize, Serialize};
+use std::cell::Ref;
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
-use serde::{Serialize, Deserialize};
+use std::rc::{Rc, Weak};
 
 pub type ExternalModule = HashMap<String, ExternalVal>;
 pub type ImportObjects = HashMap<String, ExternalModule>;
+
+pub struct ModuleAddr {
+    funcs: Vec<Rc<RefCell<FuncInst>>>,
+    tables: Vec<Rc<RefCell<TableInst>>>,
+    mems: Vec<Rc<RefCell<MemInst>>>,
+    globals: Vec<Rc<RefCell<GlobalInst>>>,
+}
 
 #[derive(Debug, Clone)]
 pub enum ExternalVal {
@@ -35,7 +44,9 @@ impl ExternalVal {
     }
 
     pub fn unwrap_func(self) -> FuncAddr {
-        self.as_func().unwrap()
+        let mut f = self.as_func().unwrap();
+        f.refp();
+        f
     }
 
     pub fn as_table(self) -> Option<TableAddr> {

@@ -10,7 +10,7 @@ use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone)]
-struct TableInst {
+pub struct TableInst {
     max: Option<usize>,
     elem: Vec<Option<FuncAddr>>,
 }

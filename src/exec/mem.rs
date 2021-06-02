@@ -13,7 +13,7 @@ use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-struct MemInst {
+pub struct MemInst {
     max: Option<usize>,
     data: Vec<u8>,
 }

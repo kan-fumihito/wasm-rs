@@ -5,7 +5,7 @@ use wasm_rs::exec::{ModuleInst, Val};
 
 fn main() {
     let module = decode_module(
-        &std::fs::read("md5-bin/target/wasm32-unknown-unknown/release/md5-bin.wasm").unwrap(),
+        &std::fs::read("md5-bin/target/wasm32-unknown-unknown/debug/md5-bin.wasm").unwrap(),
     )
     .unwrap();
     let instance = ModuleInst::new(&module, hashmap! {}).unwrap();

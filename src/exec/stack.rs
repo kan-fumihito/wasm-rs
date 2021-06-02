@@ -63,36 +63,24 @@ pub enum ModuleLevelInstr {
     Return,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AdminInstr {
     Instr(Instr),
+    #[serde(skip)]
     Invoke(FuncAddr),
     Label(Label, Vec<Instr>),
     Br(LabelIdx),
     Return,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum MAdminInstr {
-    Instr(Instr),
-    Invoke(MRuntimeFunc),
-    Label(Label, Vec<Instr>),
-    Br(LabelIdx),
-    Return,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Frame {
+    #[serde(skip)]
     pub module: Weak<ModuleInst>,
     pub locals: Vec<Val>,
     pub n: usize,
 }
 
-#[derive(Serialize, Deserialize,Debug)]
-pub struct MFrame {
-    pub locals: Vec<Val>,
-    pub n: usize,
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Label {
@@ -101,7 +89,7 @@ pub struct Label {
     pub n: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FrameStack {
     pub frame: Frame,
     // not empty
@@ -109,11 +97,7 @@ pub struct FrameStack {
     pub stack: Vec<LabelStack>,
 }
 
-#[derive(Serialize, Deserialize,Debug)]
-pub struct MFrameStack {
-    pub frame: MFrame,
-    pub stack: Vec<MLabelStack>,
-}
+
 
 impl FrameStack {
     pub fn step(&mut self) -> Result<Option<ModuleLevelInstr>, WasmError> {
@@ -181,12 +165,34 @@ impl FrameStack {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LabelStack {
     pub label: Label,
     // 後ろから実行
+    // #[serde(skip)]
     pub instrs: Vec<AdminInstr>,
     pub stack: Vec<Val>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum MAdminInstr {
+    Instr(Instr),
+    Invoke(MRuntimeFunc),
+    Label(Label, Vec<Instr>),
+    Br(LabelIdx),
+    Return,
+}
+
+#[derive(Serialize, Deserialize,Debug)]
+pub struct MFrame {
+    pub locals: Vec<Val>,
+    pub n: usize,
+}
+
+#[derive(Serialize, Deserialize,Debug)]
+pub struct MFrameStack {
+    pub frame: MFrame,
+    pub stack: Vec<MLabelStack>,
 }
 
 #[derive(Serialize, Deserialize,Debug)]
@@ -1128,7 +1134,7 @@ impl LabelStack {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Stack {
     // not empty
     pub stack: Vec<FrameStack>,

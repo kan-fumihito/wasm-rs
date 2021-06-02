@@ -14,14 +14,19 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use serde::{Serialize,Deserialize};
 
-
+/*
 #[derive(Clone, Debug)]
-pub struct FuncAddr(
-    #[serde(skip_serializing)]
-    Rc<RefCell<FuncInst>>
-);
+pub struct FuncAddr(Rc<RefCell<FuncInst>>);
+*/
+#[derive(Clone, Debug)]
+pub struct FuncAddr(u32);
+
 
 impl FuncAddr {
+    pub fn refp(&self){
+        println!("refp: {:?}", self.0);
+    }
+
     pub fn call(&self, params: Vec<Val>) -> Result<Option<Val>, WasmError> {
         let mut stack = Stack {
             stack: vec![FrameStack {
@@ -61,11 +66,12 @@ impl FuncAddr {
 
         Ok(stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop())
     }
-
+    /*
     pub(super) fn borrow(&self) -> Ref<FuncInst> {
         self.0.borrow()
     }
 
+    
     pub(super) fn alloc_dummy() -> FuncAddr {
         FuncAddr(Rc::new(RefCell::new(FuncInst::RuntimeFunc {
             type_: FuncType(Vec::new(), Vec::new()),
@@ -78,6 +84,7 @@ impl FuncAddr {
         })))
     }
 
+    
     pub(super) fn replace_dummy(&self, func: Func, module: Weak<ModuleInst>) {
         *self.0.borrow_mut() = FuncInst::new(func, module);
     }
@@ -106,15 +113,18 @@ impl FuncAddr {
             FuncInst::HostFunc { type_, .. } => type_.clone(),
         }
     }
+    */
 }
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub(super) enum FuncInst {
     RuntimeFunc {
         type_: FuncType,
         code: Func,
+        #[serde(skip)]
         module: Weak<ModuleInst>,
     },
+    #[serde(skip)]
     HostFunc {
         type_: FuncType,
         host_code: Rc<dyn Fn(Vec<Val>) -> Result<Option<Val>, WasmError>>,
