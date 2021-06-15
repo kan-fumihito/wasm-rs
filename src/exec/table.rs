@@ -9,14 +9,16 @@ use std::cell::{Ref, RefMut};
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct TableInst {
     max: Option<usize>,
     elem: Vec<Option<FuncAddr>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct TableAddr(Rc<RefCell<TableInst>>);
+pub struct TableAddr(
+    Rc<RefCell<TableInst>>
+);
 
 impl TableAddr {
     fn mut_inst(&self) -> RefMut<TableInst> {

@@ -1,7 +1,7 @@
 #[cfg(test)]
 use proptest_derive::Arbitrary;
-use serde::{Serialize, Deserialize};
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+use serde::{Deserialize, Serialize};
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct FuncType(pub Vec<ValType>, pub Vec<ValType>);
 
@@ -90,6 +90,12 @@ impl GlobalType {
 pub enum Mut {
     Const,
     Var,
+}
+
+impl Default for Mut{
+    fn default() -> Self{
+        Mut::Const
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

@@ -5,31 +5,25 @@ use crate::structure::modules::{
 use crate::structure::types::FuncType;
 use crate::WasmError;
 
-use super::func::{FuncAddr, FuncInst};
+use super::func::FuncAddr;
 use super::global::{GlobalAddr, GlobalInst};
-use super::mem::{MemAddr, MemInst};
-use super::table::{TableAddr, TableInst};
+use super::mem::{MemAddr,MemInst};
+use super::stack::Stack;
+use super::table::TableAddr;
 use super::val::Val;
 use serde::{Deserialize, Serialize};
-use std::cell::Ref;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 
 pub type ExternalModule = HashMap<String, ExternalVal>;
 pub type ImportObjects = HashMap<String, ExternalModule>;
 
-pub struct ModuleAddr {
-    funcs: Vec<Rc<RefCell<FuncInst>>>,
-    tables: Vec<Rc<RefCell<TableInst>>>,
-    mems: Vec<Rc<RefCell<MemInst>>>,
-    globals: Vec<Rc<RefCell<GlobalInst>>>,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ExternalVal {
     Func(FuncAddr),
+    #[serde(skip)]
     Table(TableAddr),
+    #[serde(skip)]
     Mem(MemAddr),
     Global(GlobalAddr),
 }
@@ -44,9 +38,10 @@ impl ExternalVal {
     }
 
     pub fn unwrap_func(self) -> FuncAddr {
-        let mut f = self.as_func().unwrap();
+        /*let mut f = self.as_func().unwrap();
         f.refp();
-        f
+        f*/
+        self.as_func().unwrap()
     }
 
     pub fn as_table(self) -> Option<TableAddr> {
@@ -86,7 +81,7 @@ impl ExternalVal {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ExportInst {
     name: String,
     value: ExternalVal,
@@ -106,14 +101,14 @@ impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
 impl TypedIdxAccess<FuncIdx> for Vec<FuncAddr> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleInst {
-    pub types: Vec<FuncType>,
-    pub funcs: Vec<FuncAddr>,
-    pub table: Option<TableAddr>,
-    pub mem: Option<MemAddr>,
-    pub globals: Vec<GlobalAddr>,
-    pub exports: Vec<ExportInst>,
+    pub types: Vec<FuncType>,     // Done
+    pub funcs: Vec<FuncAddr>,     // Done
+    pub table: Option<TableAddr>, // unnecessary?
+    pub mem: Option<MemAddr>,     // unnecessary?
+    pub globals: Vec<GlobalAddr>, // Done
+    pub exports: Vec<ExportInst>, // Done
 }
 
 impl ModuleInst {
@@ -141,6 +136,10 @@ impl ModuleInst {
                     result.funcs.push(
                         val.as_func()
                             .filter(|func| func.type_().is_match(result.types.get_idx(*idx)))
+                            /*.filter(|func| match result.addrs.funcs[func.0]{
+                                FuncInst::RuntimeFunc{type_, ..}=>type_.clone(),
+                                FuncInst::HostFunc{type_, ..}=>type_.clone(),}
+                            .is_match(result.types.get_idx(*idx)))*/
                             .ok_or_else(|| WasmError::LinkError)?,
                     );
                 }
@@ -169,7 +168,9 @@ impl ModuleInst {
         }
 
         for _ in &module.funcs {
-            result.funcs.push(FuncAddr::alloc_dummy());
+            result
+                .funcs
+                .push(FuncAddr::alloc_dummy(FuncIdx(result.funcs.len() as u32)));
         }
 
         if let Some(table) = module.tables.iter().next() {
@@ -184,6 +185,7 @@ impl ModuleInst {
             result.globals.push(GlobalAddr::alloc(
                 global.type_.clone(),
                 result.eval_const_expr(&global.init),
+                GlobalIdx(result.globals.len() as u32),
             ));
         }
 
@@ -255,10 +257,59 @@ impl ModuleInst {
         }
 
         if let Some(start) = &module.start {
-            result.funcs.get_idx(start.func).call(vec![])?;
+            result
+                .funcs
+                .get_idx(start.func)
+                .call(vec![], Rc::downgrade(&result))?;
         }
 
         Ok(result)
+    }
+
+    pub fn restore_mem(&self, json_str: String) {
+        let mem: MemInst = serde_json::from_str(json_str.as_str()).unwrap();
+        if let Some(memaddr) = &self.mem{
+            memaddr.mut_inst().set(mem);
+        }
+    }
+    pub fn restore_globals(&self, json_str: String) {
+        let globals: Vec<GlobalInst> = serde_json::from_str(json_str.as_str()).unwrap();
+
+        for i in 0..self.globals.len() {
+            let global = globals[i];
+            self.globals
+                .get_idx(GlobalIdx(i as u32))
+                .mut_inst()
+                .set(global.value, global.mut_); //=globals.get_idx(GlobalIdx(i as u32));
+        }
+    }
+
+    pub fn restore_stack(&self, json_str: String) -> Result<Option<Val>, WasmError> {
+        let mut stack: Stack = serde_json::from_str(json_str.as_str()).unwrap();
+        stack.module = Rc::downgrade(&Rc::new(self.clone()));
+        println!("restoreMod: {:?}", stack.module.upgrade());
+        
+        let mut count = 0;
+        loop {
+            stack.step(count)?;
+            if stack.stack.len() == 1
+                && stack.stack.first().unwrap().stack.len() == 1
+                && stack
+                    .stack
+                    .first()
+                    .unwrap()
+                    .stack
+                    .first()
+                    .unwrap()
+                    .instrs
+                    .is_empty()
+            {
+                break;
+            }
+            count+=1;
+        }
+
+        Ok(stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop())
     }
 
     fn eval_const_expr(&self, expr: &Expr) -> Val {

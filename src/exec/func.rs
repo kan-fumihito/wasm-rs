@@ -4,7 +4,7 @@ use super::instance::{ModuleInst, TypedIdxAccess};
 use super::stack::{AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
 use super::val::{InterpretPrimitive, PrimitiveVal, Val};
 use crate::structure::instructions::Expr;
-use crate::structure::modules::{Func, TypeIdx};
+use crate::structure::modules::{Func, TypeIdx,FuncIdx};
 use crate::structure::types::{FuncType, ValType};
 use crate::WasmError;
 use frunk::{from_generic, into_generic, Generic};
@@ -14,20 +14,25 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use serde::{Serialize,Deserialize};
 
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct FuncAddr(
+    #[serde(skip)]
+    Rc<RefCell<FuncInst>>,
+    pub FuncIdx,
+);
+
 /*
 #[derive(Clone, Debug)]
-pub struct FuncAddr(Rc<RefCell<FuncInst>>);
+pub struct FuncAddr(pub usize);
 */
-#[derive(Clone, Debug)]
-pub struct FuncAddr(u32);
-
 
 impl FuncAddr {
     pub fn refp(&self){
         println!("refp: {:?}", self.0);
     }
 
-    pub fn call(&self, params: Vec<Val>) -> Result<Option<Val>, WasmError> {
+    pub fn call(&self, params: Vec<Val>, module: Weak<ModuleInst>) -> Result<Option<Val>, WasmError> {
         let mut stack = Stack {
             stack: vec![FrameStack {
                 frame: Frame {
@@ -44,10 +49,12 @@ impl FuncAddr {
                     stack: params,
                 }],
             }],
+            restore: false,
+            module: module,
         };
-
+        let mut count=0;
         loop {
-            stack.step()?;
+            stack.step(count)?;
             if stack.stack.len() == 1
                 && stack.stack.first().unwrap().stack.len() == 1
                 && stack
@@ -62,17 +69,19 @@ impl FuncAddr {
             {
                 break;
             }
+            count+=1;
         }
+        println!("count: {}",count);
 
         Ok(stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop())
     }
-    /*
+    
     pub(super) fn borrow(&self) -> Ref<FuncInst> {
         self.0.borrow()
     }
 
     
-    pub(super) fn alloc_dummy() -> FuncAddr {
+    pub(super) fn alloc_dummy(idx: FuncIdx) -> FuncAddr {
         FuncAddr(Rc::new(RefCell::new(FuncInst::RuntimeFunc {
             type_: FuncType(Vec::new(), Vec::new()),
             code: Func {
@@ -81,7 +90,7 @@ impl FuncAddr {
                 body: Expr(Vec::new()),
             },
             module: Weak::new(),
-        })))
+        })),idx)
     }
 
     
@@ -89,7 +98,7 @@ impl FuncAddr {
         *self.0.borrow_mut() = FuncInst::new(func, module);
     }
 
-    pub fn alloc_host<P: Generic, R: Generic>(
+    pub fn alloc_host<P: Generic, R: Generic>(idx:FuncIdx,
         f: impl Fn(P) -> Result<R, WasmError> + 'static,
     ) -> FuncAddr
     where
@@ -104,7 +113,7 @@ impl FuncAddr {
                 let r = into_generic(f(from_generic(p))?);
                 Ok(r.to_option_val())
             }),
-        })))
+        })),idx)
     }
 
     pub fn type_(&self) -> FuncType {
@@ -113,7 +122,7 @@ impl FuncAddr {
             FuncInst::HostFunc { type_, .. } => type_.clone(),
         }
     }
-    */
+    
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -131,16 +140,24 @@ pub(super) enum FuncInst {
     },
 }
 
-#[derive(Serialize, Deserialize,Debug)]
-pub struct MRuntimeFunc{
-    type_: FuncType,
-    code: Func,
-}
-
 impl std::fmt::Debug for FuncInst {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "<FuncInst>")
     }
+}
+
+impl Default for FuncInst {
+    fn default() -> Self { 
+        FuncInst::RuntimeFunc{
+            type_: FuncType(Vec::new(), Vec::new()),
+            code: Func {
+                type_: TypeIdx(0),
+                locals: Vec::new(),
+                body: Expr(Vec::new()),
+            },
+            module: Weak::new(),
+        }
+    } 
 }
 
 impl FuncInst {

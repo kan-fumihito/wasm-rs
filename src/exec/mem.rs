@@ -12,7 +12,7 @@ use std::convert::TryFrom;
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 pub struct MemInst {
     max: Option<usize>,
     data: Vec<u8>,
@@ -21,17 +21,23 @@ pub struct MemInst {
 impl MemInst {
     const PAGE_SIZE: usize = 65536;
     const MAX_PAGE_SIZE: i32 = 65536;
+    pub fn set(&mut self, mem:MemInst){
+        self.max = mem.max;
+        self.data = mem.data;
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct MemAddr(Rc<RefCell<MemInst>>);
+pub struct MemAddr(
+    Rc<RefCell<MemInst>>
+);
 
 impl MemAddr {
-    fn mut_inst(&self) -> RefMut<MemInst> {
+    pub fn mut_inst(&self) -> RefMut<MemInst> {
         self.0.borrow_mut()
     }
 
-    fn inst(&self) -> Ref<MemInst> {
+    pub fn inst(&self) -> Ref<MemInst> {
         self.0.borrow()
     }
 
@@ -42,6 +48,16 @@ impl MemAddr {
     pub fn read_buffer(&self, pos: i32, len: i32) -> Option<Vec<u8>> {
         let pos = pos as usize;
         let len = len as usize;
+        let raw = &self.inst().data;
+        if pos.checked_add(len).map(|x| raw.len() < x).unwrap_or(true) {
+            return None;
+        }
+        Some(Vec::from(&raw[pos..pos + len]))
+    }
+
+    pub fn read_all(&self) -> Option<Vec<u8>> {
+        let pos: usize = 0;
+        let len: usize = self.inst().data.len();
         let raw = &self.inst().data;
         if pos.checked_add(len).map(|x| raw.len() < x).unwrap_or(true) {
             return None;

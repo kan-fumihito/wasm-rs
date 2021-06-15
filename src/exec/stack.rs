@@ -1,10 +1,12 @@
 /// Rcのみ
-use super::func::{FuncAddr, FuncInst, MRuntimeFunc};
+use super::func::{FuncAddr, FuncInst};
+use super::mem::{MemInst};
+use super::global::{GlobalAddr, GlobalInst};
 use super::instance::{ModuleInst, TypedIdxAccess};
 use super::utils::{pop_n, sign_f32, sign_f64, Sign};
 use super::val::{InterpretVal, Val};
 use crate::structure::instructions::Instr;
-use crate::structure::modules::{LabelIdx, TypedIdx};
+use crate::structure::modules::{GlobalIdx, LabelIdx, TypedIdx};
 use crate::structure::types::ValType;
 use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -13,6 +15,8 @@ use num::NumCast;
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 use std::rc::Weak;
+use std::fs::File;
+use std::fs;
 
 pub trait StackValues: Sized {
     fn pop_stack(stack: &mut Vec<Val>) -> Option<Self>;
@@ -48,7 +52,7 @@ impl<H: StackValues, T: HList + StackValues> StackValues for HCons<H, T> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum FrameLevelInstr {
     Label(Label, /* 前から */ Vec<Instr>),
     Br(LabelIdx),
@@ -57,7 +61,7 @@ pub enum FrameLevelInstr {
     Return,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ModuleLevelInstr {
     Invoke(FuncAddr),
     Return,
@@ -66,7 +70,6 @@ pub enum ModuleLevelInstr {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AdminInstr {
     Instr(Instr),
-    #[serde(skip)]
     Invoke(FuncAddr),
     Label(Label, Vec<Instr>),
     Br(LabelIdx),
@@ -80,7 +83,6 @@ pub struct Frame {
     pub locals: Vec<Val>,
     pub n: usize,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Label {
@@ -97,10 +99,9 @@ pub struct FrameStack {
     pub stack: Vec<LabelStack>,
 }
 
-
-
 impl FrameStack {
-    pub fn step(&mut self) -> Result<Option<ModuleLevelInstr>, WasmError> {
+    pub fn step(&mut self,module: Weak<ModuleInst>) -> Result<Option<ModuleLevelInstr>, WasmError> {
+        self.frame.module = module;
         let cur_lavel = self.stack.last_mut().unwrap();
         Ok(if let Some(instr) = cur_lavel.step(&mut self.frame)? {
             match instr {
@@ -171,34 +172,6 @@ pub struct LabelStack {
     // 後ろから実行
     // #[serde(skip)]
     pub instrs: Vec<AdminInstr>,
-    pub stack: Vec<Val>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum MAdminInstr {
-    Instr(Instr),
-    Invoke(MRuntimeFunc),
-    Label(Label, Vec<Instr>),
-    Br(LabelIdx),
-    Return,
-}
-
-#[derive(Serialize, Deserialize,Debug)]
-pub struct MFrame {
-    pub locals: Vec<Val>,
-    pub n: usize,
-}
-
-#[derive(Serialize, Deserialize,Debug)]
-pub struct MFrameStack {
-    pub frame: MFrame,
-    pub stack: Vec<MLabelStack>,
-}
-
-#[derive(Serialize, Deserialize,Debug)]
-pub struct MLabelStack {
-    pub label: Label,
-    pub instrs: Vec<MAdminInstr>,
     pub stack: Vec<Val>,
 }
 
@@ -1138,76 +1111,103 @@ impl LabelStack {
 pub struct Stack {
     // not empty
     pub stack: Vec<FrameStack>,
-}
-
-#[derive(Serialize, Deserialize,Debug)]
-pub struct MStack {
-    pub stack: Vec<MFrameStack>,
+    pub restore: bool,
+    #[serde(skip)]
+    pub module: Weak<ModuleInst>,
 }
 
 impl Stack {
-    pub fn step(&mut self) -> Result<(), WasmError> {
+    pub fn step(&mut self, count: i64) -> Result<(), WasmError> {
+        if count == 90000 {
+            let instance = self.module.upgrade().unwrap();
+            let mem: MemInst = instance.mem.as_ref().unwrap().mut_inst().clone();
+            let mut globals: Vec<GlobalInst> = Vec::new();
+            for i in 0..instance.globals.len() {
+                globals.push(instance.globals.get_idx(GlobalIdx(i as u32)).mut_inst().clone());
+            }
+            self.restore = true;
+            let stack_json = serde_json::to_string(self).unwrap_or(String::from("Error"));
+            let mem_json = serde_json::to_string(&mem).unwrap_or(String::from("Error"));
+            let globals_json = serde_json::to_string(&globals).unwrap_or(String::from("Error"));
+
+            /*
+            let mut stack_img = File::create("stack.json").unwrap();
+            let mut mem_img = File::create("mem.json").unwrap();
+            let mut globals_img = File::create("globals.json").unwrap();
+            */
+            fs::write("stack.json", stack_json).unwrap();
+            fs::write("mem.json", mem_json).unwrap();
+            fs::write("globals.json", globals_json).unwrap();
+        }
+        println!("{}",count);
+        println!("Mod: {:?}",self.module.upgrade().unwrap());
         let cur_frame = self.stack.last_mut().unwrap();
-        if let Some(instr) = cur_frame.step()? {
+        if let Some(instr) = cur_frame.step(self.module.clone())? {
             let cur_label = cur_frame.stack.last_mut().unwrap();
             match instr {
-                ModuleLevelInstr::Invoke(func) => match &*func.borrow() {
-                    FuncInst::RuntimeFunc {
-                        type_,
-                        code,
-                        module,
-                    } => {
-                        let fs = FrameStack {
-                            frame: Frame {
-                                locals: {
-                                    let mut locals = Vec::new();
-                                    locals.append(&mut pop_n(
-                                        &mut cur_label.stack,
-                                        type_.params().len(),
-                                    ));
-                                    locals.append(
-                                        &mut code
-                                            .locals
-                                            .iter()
-                                            .map(|vt| match vt {
-                                                ValType::I32 => Val::I32(0),
-                                                ValType::I64 => Val::I64(0),
-                                                ValType::F32 => Val::F32(0.0),
-                                                ValType::F64 => Val::F64(0.0),
-                                            })
-                                            .collect(),
-                                    );
+                ModuleLevelInstr::Invoke(mut func) => {
+                    if self.restore == true {
+                        let instance = self.module.upgrade().unwrap();
+                        func = instance.funcs.get_idx(func.1).clone();
+                    }
+                    match &*func.borrow() {
+                        FuncInst::RuntimeFunc {
+                            type_,
+                            code,
+                            module,
+                        } => {
+                            let fs = FrameStack {
+                                frame: Frame {
+                                    locals: {
+                                        let mut locals = Vec::new();
+                                        locals.append(&mut pop_n(
+                                            &mut cur_label.stack,
+                                            type_.params().len(),
+                                        ));
+                                        locals.append(
+                                            &mut code
+                                                .locals
+                                                .iter()
+                                                .map(|vt| match vt {
+                                                    ValType::I32 => Val::I32(0),
+                                                    ValType::I64 => Val::I64(0),
+                                                    ValType::F32 => Val::F32(0.0),
+                                                    ValType::F64 => Val::F64(0.0),
+                                                })
+                                                .collect(),
+                                        );
 
-                                    locals
-                                },
-                                module: module.clone(),
-                                n: type_.ret().iter().count(),
-                            },
-                            stack: vec![LabelStack {
-                                stack: vec![],
-                                label: Label {
-                                    instrs: vec![],
+                                        locals
+                                    },
+                                    module: module.clone(),
                                     n: type_.ret().iter().count(),
                                 },
-                                instrs: code
-                                    .body
-                                    .0
-                                    .clone()
-                                    .into_iter()
-                                    .map(AdminInstr::Instr)
-                                    .rev()
-                                    .collect(),
-                            }],
-                        };
-                        self.stack.push(fs);
-                    }
-                    FuncInst::HostFunc { type_, host_code } => {
-                        let params = pop_n(&mut cur_label.stack, type_.params().len());
-                        if let Some(result) = host_code(params)? {
-                            cur_label.stack.push(result);
+                                stack: vec![LabelStack {
+                                    stack: vec![],
+                                    label: Label {
+                                        instrs: vec![],
+                                        n: type_.ret().iter().count(),
+                                    },
+                                    instrs: code
+                                        .body
+                                        .0
+                                        .clone()
+                                        .into_iter()
+                                        .map(AdminInstr::Instr)
+                                        .rev()
+                                        .collect(),
+                                }],
+                            };
+                            self.stack.push(fs);
+                        }
+                        FuncInst::HostFunc { type_, host_code } => {
+                            let params = pop_n(&mut cur_label.stack, type_.params().len());
+                            if let Some(result) = host_code(params)? {
+                                cur_label.stack.push(result);
+                            }
                         }
                     }
-                },
+                }
                 ModuleLevelInstr::Return => {
                     let ret = cur_label.stack.pop();
                     if self.stack.pop().unwrap().frame.n != 0 {

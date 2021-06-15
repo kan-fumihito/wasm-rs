@@ -1,28 +1,46 @@
 /// Rcのみ
 use crate::structure::types::{GlobalType, Mut};
+use crate::structure::modules::{GlobalIdx};
 
 use super::val::Val;
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::cell::{Ref, RefMut};
 use std::rc::Rc;
-use serde::{Serialize,Deserialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default,Copy)]
 pub struct GlobalInst {
-    value: Val,
-    mut_: Mut,
+    pub value: Val,
+    pub mut_: Mut,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct GlobalAddr(Rc<RefCell<GlobalInst>>);
+impl GlobalInst{
+    pub fn set(&mut self, value:Val,mut_:Mut){
+        self.value=value;
+        self.mut_=mut_;
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct GlobalAddr(
+    #[serde(skip)] Rc<RefCell<GlobalInst>>, 
+    pub GlobalIdx,
+);
 
 impl GlobalAddr {
-    fn mut_inst(&self) -> RefMut<GlobalInst> {
+    pub fn mut_inst(&self) -> RefMut<GlobalInst> {
         self.0.borrow_mut()
     }
 
-    fn inst(&self) -> Ref<GlobalInst> {
+    pub fn inst(&self) -> Ref<GlobalInst> {
         self.0.borrow()
+    }
+
+    pub fn get_inst(&self) -> GlobalInst{
+        GlobalInst{
+            mut_:self.inst().mut_,
+            value: self.inst().value,
+        }
     }
 
     pub fn type_(&self) -> GlobalType {
@@ -30,12 +48,12 @@ impl GlobalAddr {
         GlobalType(inst.mut_.clone(), inst.value.val_type())
     }
 
-    pub fn new(mut_: Mut, val: Val) -> GlobalAddr {
-        GlobalAddr(Rc::new(RefCell::new(GlobalInst { value: val, mut_ })))
+    pub fn new(mut_: Mut, val: Val, idx:GlobalIdx) -> GlobalAddr {
+        GlobalAddr(Rc::new(RefCell::new(GlobalInst { value: val, mut_ })),idx)
     }
 
-    pub(super) fn alloc(type_: GlobalType, val: Val) -> GlobalAddr {
-        GlobalAddr::new(type_.0, val)
+    pub(super) fn alloc(type_: GlobalType, val: Val, idx: GlobalIdx) -> GlobalAddr {
+        GlobalAddr::new(type_.0, val, idx)
     }
 
     pub fn get(&self) -> Val {

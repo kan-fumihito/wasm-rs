@@ -10,6 +10,11 @@ pub enum Val {
     F32(f32),
     F64(f64),
 }
+impl Default for Val{
+    fn default() -> Self { 
+        Val::I32(0)
+    } 
+}
 
 impl Val {
     pub fn val_type(&self) -> ValType {
