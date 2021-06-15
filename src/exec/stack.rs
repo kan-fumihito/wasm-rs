@@ -1139,8 +1139,8 @@ impl Stack {
             fs::write("mem.json", mem_json).unwrap();
             fs::write("globals.json", globals_json).unwrap();
         }
-        println!("{}",count);
-        println!("Mod: {:?}",self.module.upgrade().unwrap());
+        //println!("{}",count);
+        //println!("Mod: {:?}",self.module.upgrade().unwrap());
         let cur_frame = self.stack.last_mut().unwrap();
         if let Some(instr) = cur_frame.step(self.module.clone())? {
             let cur_label = cur_frame.stack.last_mut().unwrap();
