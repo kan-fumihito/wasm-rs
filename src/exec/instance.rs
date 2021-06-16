@@ -290,8 +290,9 @@ impl ModuleInst {
         stack.module = Rc::downgrade(instance);
         //println!("restoreMod: {:?}", stack.module.upgrade().unwrap());
 
+        let mut count =0;
         loop {
-            stack.step(0)?;
+            stack.step(count)?;
             if stack.stack.len() == 1
                 && stack.stack.first().unwrap().stack.len() == 1
                 && stack
@@ -306,8 +307,10 @@ impl ModuleInst {
             {
                 break;
             }
+            count+=1;
+            
         }
-
+        println!("{}",count);
         Ok(stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop())
     }
 

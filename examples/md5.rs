@@ -12,7 +12,7 @@ fn main() {
     )
     .unwrap();
     let instance = ModuleInst::new(&module, hashmap! {}).unwrap();
-    let instance = Rc::new(instance);
+    //let instance = Rc::new(instance);
 
     let input_bytes = CString::new("abc").unwrap().into_bytes();
     let input_ptr = instance

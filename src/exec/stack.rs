@@ -1,8 +1,8 @@
 /// Rcのみ
 use super::func::{FuncAddr, FuncInst};
-use super::mem::{MemInst};
 use super::global::{GlobalAddr, GlobalInst};
 use super::instance::{ModuleInst, TypedIdxAccess};
+use super::mem::MemInst;
 use super::utils::{pop_n, sign_f32, sign_f64, Sign};
 use super::val::{InterpretVal, Val};
 use crate::structure::instructions::Instr;
@@ -13,10 +13,10 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
 use num::NumCast;
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::fs::File;
 use std::io::Cursor;
 use std::rc::Weak;
-use std::fs::File;
-use std::fs;
 
 pub trait StackValues: Sized {
     fn pop_stack(stack: &mut Vec<Val>) -> Option<Self>;
@@ -100,7 +100,10 @@ pub struct FrameStack {
 }
 
 impl FrameStack {
-    pub fn step(&mut self,module: Weak<ModuleInst>) -> Result<Option<ModuleLevelInstr>, WasmError> {
+    pub fn step(
+        &mut self,
+        module: Weak<ModuleInst>,
+    ) -> Result<Option<ModuleLevelInstr>, WasmError> {
         self.frame.module = module;
         let cur_lavel = self.stack.last_mut().unwrap();
         Ok(if let Some(instr) = cur_lavel.step(&mut self.frame)? {
@@ -1123,7 +1126,13 @@ impl Stack {
             let mem: MemInst = instance.mem.as_ref().unwrap().mut_inst().clone();
             let mut globals: Vec<GlobalInst> = Vec::new();
             for i in 0..instance.globals.len() {
-                globals.push(instance.globals.get_idx(GlobalIdx(i as u32)).mut_inst().clone());
+                globals.push(
+                    instance
+                        .globals
+                        .get_idx(GlobalIdx(i as u32))
+                        .mut_inst()
+                        .clone(),
+                );
             }
             self.restore = true;
             let stack_json = serde_json::to_string(self).unwrap_or(String::from("Error"));
