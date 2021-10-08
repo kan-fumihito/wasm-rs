@@ -21,11 +21,10 @@ fn main() {
     instance.restore_mem(String::from_utf8(mem_json).unwrap());
     instance.restore_globals(String::from_utf8(globals_json).unwrap());
     let output_ptr = instance
-        .restore_stack(String::from_utf8(stack_json).unwrap(),&instance)
+        .restore_stack(String::from_utf8(stack_json).unwrap(), &instance)
         .unwrap()
         .unwrap()
         .unwrap_i32() as usize;
-    
     /*
     let output_ptr = instance
         .export("md5")
